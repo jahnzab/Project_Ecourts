@@ -1,0 +1,12 @@
+Python 3.12
+
+Flask
+Selenium
+BeautifulSoup4
+pandas
+requests
+webdriver-manager
+Pillow
+opencv-python
+pytesseract
+reportlab

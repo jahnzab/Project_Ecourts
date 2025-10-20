@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCourts Case List Scraper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-section {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input[type="text"], input[type="date"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="date"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .start-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-section {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .progress-section.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .status-message {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .status-message.error {
+            border-left-color: #e74c3c;
+            background: #ffe6e6;
+            color: #c0392b;
+        }
+        
+        .status-message.success {
+            border-left-color: #27ae60;
+            background: #e8f8f5;
+            color: #16a085;
+        }
+        
+        .status-message.info {
+            border-left-color: #3498db;
+            background: #ebf5fb;
+            color: #2c3e50;
+        }
+        
+        .input-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+        
+        .input-section.show {
+            display: block;
+            animation: slideIn 0.3s ease-in;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .dropdown-section {
+            margin-bottom: 15px;
+        }
+        
+        .dropdown-label {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 14px;
+        }
+        
+        select.dropdown {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        select.dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .selection-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .selection-btn:hover {
+            border-color: #667eea;
+            background: #f5f5f5;
+        }
+        
+        .selection-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .confirm-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        
+        .confirm-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        
+        .confirm-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .case-type-section {
+            background: #f9f9f9;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .case-type-section h3 {
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .case-type-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .case-type-btn {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        
+        .case-type-btn:hover {
+            border-color: #667eea;
+            background: #f5f5f5;
+            transform: translateY(-2px);
+        }
+        
+        .case-type-btn.civil.selected {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .case-type-btn.criminal.selected {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border-color: #c0392b;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .results-section.show {
+            display: block;
+        }
+        
+        .results-header {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .case-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+        
+        .download-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .download-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #3498db;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .download-btn.pdf {
+            background: #e74c3c;
+        }
+        
+        .download-btn.pdf:hover {
+            background: #c0392b;
+        }
+        
+        .cancel-btn {
+            width: 100%;
+            padding: 10px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .cancel-btn:hover {
+            background: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>eCourts Case List Scraper</h1>
+            <p>Automated scraping with interactive selection</p>
+        </div>
+        
+        <!-- Initial Form Section -->
+        <div id="formSection" class="form-section">
+            <div class="form-section">
+                <label for="districtInput">District:</label>
+                <input type="text" id="districtInput" placeholder="Enter district name" value="">
+            </div>
+            
+            <div class="form-section">
+                <label for="dateInput">Date (optional):</label>
+                <input type="date" id="dateInput">
+            </div>
+            
+            <button class="start-btn" id="startBtn" onclick="startScraping()">
+                Start Scraping
+            </button>
+        </div>
+        
+        <!-- Progress Section -->
+        <div id="progressSection" class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="status-message" id="statusMessage">
+                <span class="loading-spinner"></span>
+                Initializing...
+            </div>
+            
+            <!-- Dropdown Input Sections -->
+            <div id="stateInputSection" class="input-section">
+                <div class="dropdown-section">
+                    <label class="dropdown-label">Select State:</label>
+                    <select class="dropdown" id="stateDropdown" onchange="selectDropdownValue('state', this.value)">
+                        <option value="">-- Loading states --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="districtInputSection" class="input-section">
+                <div class="dropdown-section">
+                    <label class="dropdown-label">Select District:</label>
+                    <select class="dropdown" id="districtDropdown" onchange="selectDropdownValue('district', this.value)">
+                        <option value="">-- Loading districts --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="complexInputSection" class="input-section">
+                <div class="dropdown-section">
+                    <label class="dropdown-label">Select Court Complex:</label>
+                    <select class="dropdown" id="complexDropdown" onchange="selectDropdownValue('complex', this.value)">
+                        <option value="">-- Loading complexes --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="judgeInputSection" class="input-section">
+                <div class="dropdown-section">
+                    <label class="dropdown-label">Select Judge:</label>
+                    <select class="dropdown" id="judgeDropdown" onchange="selectDropdownValue('judge', this.value)">
+                        <option value="">-- Loading judges --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- CASE TYPE SELECTION SECTION - THIS IS NEW -->
+            <div id="caseTypeInputSection" class="input-section">
+                <div class="case-type-section">
+                    <h3>📋 Select Case Type</h3>
+                    <p style="text-align: center; color: #666; font-size: 13px; margin-bottom: 15px;">
+                        CAPTCHA has been solved automatically!
+                    </p>
+                    <div class="case-type-buttons">
+                        <button class="case-type-btn civil" id="civilBtn" onclick="selectCaseType('Civil')">
+                            🏛️ CIVIL
+                        </button>
+                        <button class="case-type-btn criminal" id="criminalBtn" onclick="selectCaseType('Criminal')">
+                            ⚖️ CRIMINAL
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section">
+                <div class="results-header">
+                    ✅ Scraping Completed Successfully!
+                </div>
+                
+                <div class="status-message success" id="resultsSummary">
+                    Cases extracted and ready for download
+                </div>
+                
+                <div class="case-preview" id="casePreview"></div>
+                
+                <div class="download-buttons">
+                    <button class="download-btn" onclick="downloadCSV()">📥 Download CSV</button>
+                    <button class="download-btn pdf" onclick="downloadPDF()">📄 Download PDF</button>
+                </div>
+                
+                <button class="start-btn" id="newScrapingBtn" onclick="resetAndStartNew()" style="margin-top: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    🔄 Start New Scraping
+                </button>
+            </div>
+            
+            <!-- Cancel Button -->
+            <button class="cancel-btn" id="cancelBtn" onclick="cancelScraping()" style="display: none;">
+                ❌ Cancel Scraping
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        let currentSessionId = null;
+        let selectedCaseType = null;
+        let statusPollingInterval = null;
+        
+        function startScraping() {
+            const district = document.getElementById('districtInput').value.trim();
+            const dateInput = document.getElementById('dateInput').value;
+            
+            if (!district) {
+                alert('Please enter a district');
+                return;
+            }
+            
+            let when = 'today';
+            if (dateInput) {
+                when = dateInput;
+            }
+            
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('progressSection').classList.add('show');
+            document.getElementById('cancelBtn').style.display = 'block';
+            
+            fetch('/start_scraping', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    district: district,
+                    when: when
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.session_id) {
+                    currentSessionId = data.session_id;
+                    startStatusPolling();
+                } else {
+                    showError('Failed to start scraping: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showError('Error starting scraping: ' + error.message);
+            });
+        }
+        
+        function startStatusPolling() {
+            statusPollingInterval = setInterval(() => {
+                if (!currentSessionId) return;
+                
+                fetch(`/scraping_status/${currentSessionId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateStatus(data);
+                    })
+                    .catch(error => {
+                        console.error('Status polling error:', error);
+                    });
+            }, 2000); // Poll every 2 seconds
+        }
+        
+        function updateStatus(data) {
+            // Update progress bar
+            document.getElementById('progressFill').style.width = data.progress + '%';
+            
+            // Update status message
+            const statusMsg = document.getElementById('statusMessage');
+            if (data.error) {
+                statusMsg.className = 'status-message error';
+                statusMsg.innerHTML = '❌ Error: ' + data.error;
+                clearInterval(statusPollingInterval);
+                document.getElementById('cancelBtn').style.display = 'none';
+                return;
+            }
+            
+            statusMsg.className = 'status-message';
+            if (data.requires_user_input) {
+                statusMsg.innerHTML = data.message;
+            } else {
+                statusMsg.innerHTML = '<span class="loading-spinner"></span>' + data.message;
+            }
+            
+            // Handle user input sections
+            document.getElementById('stateInputSection').classList.toggle('show', data.user_input_type === 'state');
+            document.getElementById('districtInputSection').classList.toggle('show', data.user_input_type === 'district');
+            document.getElementById('complexInputSection').classList.toggle('show', data.user_input_type === 'complex');
+            document.getElementById('judgeInputSection').classList.toggle('show', data.user_input_type === 'judge');
+            document.getElementById('caseTypeInputSection').classList.toggle('show', data.user_input_type === 'case_type');
+            
+            // Populate dropdowns
+            if (data.user_input_type === 'state' && data.available_states) {
+                populateDropdown('stateDropdown', data.available_states);
+            } else if (data.user_input_type === 'district' && data.available_districts) {
+                populateDropdown('districtDropdown', data.available_districts);
+            } else if (data.user_input_type === 'complex' && data.available_complexes) {
+                populateDropdown('complexDropdown', data.available_complexes);
+            } else if (data.user_input_type === 'judge' && data.available_judges) {
+                populateDropdown('judgeDropdown', data.available_judges);
+            }
+            
+            // Handle completion
+            if (data.status === 'completed') {
+                clearInterval(statusPollingInterval);
+                document.getElementById('cancelBtn').style.display = 'none';
+                showResults(data);
+            }
+        }
+        
+        function populateDropdown(dropdownId, options) {
+            const dropdown = document.getElementById(dropdownId);
+            dropdown.innerHTML = '<option value="">-- Select an option --</option>';
+            options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                dropdown.appendChild(opt);
+            });
+        }
+        
+        function selectDropdownValue(type, value) {
+            if (!value) return;
+            
+            fetch(`/provide_selection/${currentSessionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: type,
+                    value: value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Selection confirmed:', data);
+            })
+            .catch(error => {
+                console.error('Error sending selection:', error);
+            });
+        }
+        
+        function selectCaseType(caseType) {
+            selectedCaseType = caseType;
+            
+            // Update button styles
+            document.getElementById('civilBtn').classList.toggle('selected', caseType === 'Civil');
+            document.getElementById('criminalBtn').classList.toggle('selected', caseType === 'Criminal');
+            
+            // Send selection to backend
+            fetch(`/provide_selection/${currentSessionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: 'case_type',
+                    value: caseType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Case type selection confirmed:', data);
+            })
+            .catch(error => {
+                console.error('Error sending case type:', error);
+            });
+        }
+        
+        function showResults(data) {
+            document.getElementById('caseTypeInputSection').classList.remove('show');
+            document.getElementById('resultsSection').classList.add('show');
+            
+            const summary = document.getElementById('resultsSummary');
+            summary.innerHTML = `✅ Successfully extracted <strong>${data.case_count}</strong> cases!`;
+            
+            // Show case preview
+            if (data.case_count > 0) {
+                const preview = document.getElementById('casePreview');
+                preview.innerHTML = `<strong>Cases found:</strong> ${data.case_count}<br>Session ID: ${currentSessionId}`;
+            }
+        }
+        
+        function downloadCSV() {
+            window.location.href = `/download_results/${currentSessionId}`;
+        }
+        
+        function downloadPDF() {
+            window.location.href = `/generate_pdf/${currentSessionId}`;
+        }
+        
+        function cancelScraping() {
+            if (confirm('Are you sure you want to cancel scraping?')) {
+                fetch(`/cancel_scraping/${currentSessionId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    clearInterval(statusPollingInterval);
+                    document.getElementById('progressSection').classList.remove('show');
+                    document.getElementById('formSection').style.display = 'block';
+                    document.getElementById('cancelBtn').style.display = 'none';
+                    currentSessionId = null;
+                })
+                .catch(error => {
+                    console.error('Error cancelling:', error);
+                });
+            }
+        }
+        
+        function showError(message) {
+            const statusMsg = document.getElementById('statusMessage');
+            statusMsg.className = 'status-message error';
+            statusMsg.textContent = '❌ ' + message;
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+        
+        // Set today's date as default
+        document.getElementById('dateInput').valueAsDate = new Date();
+    </script>
+</body>
+</html>

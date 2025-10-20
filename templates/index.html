@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-search"></i> eCourts Cause List Scraper
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Scraping Form -->
+                <form id="scrapingForm">
+                    <div class="mb-3">
+                        <label for="district" class="form-label">District *</label>
+                        <input type="text" class="form-control" id="district" 
+                               placeholder="Enter district name" required>
+                        <div class="form-text">Enter the district name as it appears on eCourts website</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="when" class="form-label">Date</label>
+                        <select class="form-select" id="when">
+                            <option value="today">Today</option>
+                            <option value="tomorrow">Tomorrow</option>
+                            <option value="custom">Custom Date (YYYY-MM-DD)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="customDateContainer" style="display: none;">
+                        <label for="customDate" class="form-label">Custom Date</label>
+                        <input type="date" class="form-control" id="customDate">
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="headless" checked>
+                        <label class="form-check-label" for="headless">
+                            Run in background (headless mode)
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-play"></i> Start Scraping
+                    </button>
+                </form>
+
+                <!-- Progress Section -->
+                <div id="progressSection" style="display: none;" class="mt-4">
+                    <h5>Scraping Progress</h5>
+                    <div class="progress mb-3">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                    <div id="progressMessage" class="alert alert-info"></div>
+                    
+                    <!-- Cases Preview -->
+                    <div id="casesPreview" style="display: none;">
+                        <h6>Preview (First 10 cases):</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped case-table">
+                                <thead>
+                                    <tr>
+                                        <th>Sr No</th>
+                                        <th>Case Number</th>
+                                        <th>Parties</th>
+                                        <th>Advocate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="casesTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" style="display: none;" class="mt-4">
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle"></i> Scraping Completed!</h5>
+                        <p id="completionMessage"></p>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button id="downloadCsvBtn" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download CSV
+                        </button>
+                        <button id="downloadPdfBtn" class="btn btn-danger">
+                            <i class="fas fa-file-pdf"></i> Download PDF Report
+                        </button>
+                        <button id="newScrapingBtn" class="btn btn-outline-primary">
+                            <i class="fas fa-plus"></i> New Scraping
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Section -->
+                <div id="errorSection" style="display: none;" class="mt-4">
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Scraping Failed</h5>
+                        <p id="errorMessage"></p>
+                    </div>
+                    <button id="retryBtn" class="btn btn-warning">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>Enter the district name exactly as it appears on the eCourts website</li>
+                    <li>Select the date for which you want the cause list</li>
+                    <li>Click "Start Scraping" and wait for the process to complete</li>
+                    <li>Download results in CSV or PDF format</li>
+                    <li><strong>Note:</strong> The scraping may take 2-5 minutes depending on website response</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSessionId = null;
+let statusInterval = null;
+
+// Handle date selection
+document.getElementById('when').addEventListener('change', function() {
+    const customContainer = document.getElementById('customDateContainer');
+    if (this.value === 'custom') {
+        customContainer.style.display = 'block';
+    } else {
+        customContainer.style.display = 'none';
+    }
+});
+
+// Start scraping
+document.getElementById('scrapingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const district = document.getElementById('district').value;
+    const whenSelect = document.getElementById('when');
+    let when = whenSelect.value;
+    
+    if (when === 'custom') {
+        const customDate = document.getElementById('customDate').value;
+        if (!customDate) {
+            alert('Please select a custom date');
+            return;
+        }
+        when = customDate;
+    }
+    
+    const headless = document.getElementById('headless').checked;
+    
+    startScraping(district, when, headless);
+});
+
+function startScraping(district, when, headless) {
+    // Show progress section
+    document.getElementById('scrapingForm').style.display = 'none';
+    document.getElementById('progressSection').style.display = 'block';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('errorSection').style.display = 'none';
+    
+    fetch('/start_scraping', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            district: district,
+            when: when,
+            headless: headless
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+        
+        currentSessionId = data.session_id;
+        startStatusPolling();
+    })
+    .catch(error => {
+        showError('Failed to start scraping: ' + error);
+    });
+}
+
+function startStatusPolling() {
+    statusInterval = setInterval(() => {
+        fetch(`/scraping_status/${currentSessionId}`)
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(data);
+                
+                // Stop polling if completed or error
+                if (data.status === 'completed' || data.status === 'error') {
+                    clearInterval(statusInterval);
+                    
+                    if (data.status === 'completed') {
+                        showResults(data);
+                    } else {
+                        showError(data.error || 'Scraping failed');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Status polling error:', error);
+            });
+    }, 2000);
+}
+
+function updateProgress(data) {
+    const progressBar = document.getElementById('progressBar');
+    const progressMessage = document.getElementById('progressMessage');
+    
+    progressBar.style.width = data.progress + '%';
+    progressBar.textContent = data.progress + '%';
+    progressMessage.textContent = data.message;
+    
+    // Update progress bar color based on status
+    progressBar.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+    if (data.status === 'completed') {
+        progressBar.classList.add('bg-success');
+    } else if (data.status === 'error') {
+        progressBar.classList.add('bg-danger');
+    } else {
+        progressBar.classList.add('bg-warning');
+    }
+    
+    // Show cases preview if available
+    if (data.cases && data.cases.length > 0) {
+        showCasesPreview(data.cases);
+    }
+}
+
+function showCasesPreview(cases) {
+    const casesPreview = document.getElementById('casesPreview');
+    const tableBody = document.getElementById('casesTableBody');
+    
+    tableBody.innerHTML = '';
+    cases.forEach(caseItem => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${caseItem.serial || ''}</td>
+            <td>${caseItem.case_number || ''}</td>
+            <td>${caseItem.party_name || caseItem.parties || ''}</td>
+            <td>${caseItem.advocate || ''}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+    
+    casesPreview.style.display = 'block';
+}
+
+function showResults(data) {
+    document.getElementById('progressSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('completionMessage').textContent = 
+        `Successfully extracted ${data.case_count} cases.`;
+}
+
+function showError(message) {
+    document.getElementById('progressSection').style.display = 'none';
+    document.getElementById('errorSection').style.display = 'block';
+    document.getElementById('errorMessage').textContent = message;
+}
+
+// Download handlers
+document.getElementById('downloadCsvBtn').addEventListener('click', function() {
+    if (currentSessionId) {
+        window.location.href = `/download_results/${currentSessionId}`;
+    }
+});
+
+document.getElementById('downloadPdfBtn').addEventListener('click', function() {
+    if (currentSessionId) {
+        window.location.href = `/generate_pdf/${currentSessionId}`;
+    }
+});
+
+// Navigation handlers
+document.getElementById('newScrapingBtn').addEventListener('click', function() {
+    resetForm();
+});
+
+document.getElementById('retryBtn').addEventListener('click', function() {
+    resetForm();
+});
+
+function resetForm() {
+    document.getElementById('scrapingForm').style.display = 'block';
+    document.getElementById('progressSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('errorSection').style.display = 'none';
+    document.getElementById('casesPreview').style.display = 'none';
+    
+    if (statusInterval) {
+        clearInterval(statusInterval);
+    }
+    
+    currentSessionId = null;
+}
+</script>
+{% endblock %}
